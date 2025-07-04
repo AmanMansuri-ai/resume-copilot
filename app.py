@@ -2,7 +2,7 @@ import streamlit as st
 from transformers import pipeline
 from PyPDF2 import PdfReader
 
-st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 Resumed By Copilot</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Transformers 🚀</p>", unsafe_allow_html=True)
 st.write("---")
 
