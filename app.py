@@ -2,19 +2,19 @@ import streamlit as st
 from transformers import pipeline
 from PyPDF2 import PdfReader
 
-# ✅ Page configuration
-st.set_page_config(page_title="ResumeCopilot - AI Resume Assistant", page_icon="📄", layout="wide")
-st.title("📄 ResumeCopilot")
-st.caption("Ask AI smart questions about your resume — Powered by Transformers 🚀")
+st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Transformers 🚀</p>", unsafe_allow_html=True)
 st.write("---")
+
 
 with st.sidebar:
     st.header("📄 Upload Your Resume")
     uploaded_file = st.file_uploader("Choose your resume (PDF)", type=["pdf"])
 
-    # Optional: About section
     st.markdown("---")
-    st.caption("🔨 Built by Aman Mansuri")
+    st.markdown("👤 **Aman Mansuri**")
+    st.caption("[GitHub Repo](https://github.com/AmanMansuri-ai/resume-copilot)")
+
 
 
 
@@ -32,14 +32,16 @@ if uploaded_file:
         resume_text += page.extract_text() or ""
 
     with col1:
-        st.subheader("🔍 Ask AI About Your Resume")
+        col1.subheader("🤖 Ask AI About Your Resume")
+
         question = st.text_input("Type your question:")
         if question:
             result = qa_pipeline(question=question, context=resume_text)
             st.write("Answer:", result["answer"])
 
     with col2:
-        st.subheader("📝 Resume Preview")
+        col2.subheader("📝 Resume Text Preview")
+
         if st.checkbox("Show extracted resume text"):
             st.write(resume_text)
 
@@ -47,4 +49,5 @@ else:
     st.warning("Please upload your resume from the sidebar to start.")
 
 st.write("---")
-st.caption("ResumeCopilot © 2025 | GitHub: [AmanMansuri-ai](https://github.com/AmanMansuri-ai/resume-copilot)")
+st.markdown("<p style='text-align: center; font-size: 12px;'>© 2025 Aman Mansuri | Built with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+
