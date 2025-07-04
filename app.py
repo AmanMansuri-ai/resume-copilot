@@ -1,23 +1,39 @@
 import streamlit as st
-import openai
 from PyPDF2 import PdfReader
 import os
+import requests
 
-# ✅ Set your OpenAI API key from env
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# ✅ Hugging Face API call function
+HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
+def ask_huggingface(question, context):
+    API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
+    headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
+    payload = {"inputs": {"question": question, "context": context}}
+
+    response = requests.post(API_URL, headers=headers, json=payload)
+    
+    # ✅ Safely handle the response
+    if response.status_code == 200:
+        result = response.json()
+        return result.get('answer', 'No answer found')
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+
+# ✅ Streamlit page config
 st.set_page_config(page_title="ResumeCopilot", page_icon="📄", layout="wide")
-st.title("📄 ResumeCopilot")
-st.caption("Ask AI questions about your resume — Powered by GPT 🚀")
+st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Hugging Face 🚀</p>", unsafe_allow_html=True)
 st.write("---")
 
+# ✅ Sidebar upload
 with st.sidebar:
     st.header("📄 Upload Your Resume")
     uploaded_file = st.file_uploader("Choose your resume (PDF)", type=["pdf"])
-
     st.markdown("---")
     st.caption("👤 Aman Mansuri | [GitHub](https://github.com/AmanMansuri-ai/resume-copilot)")
 
+# ✅ Process resume
 if uploaded_file:
     reader = PdfReader(uploaded_file)
     resume_text = ""
@@ -27,16 +43,11 @@ if uploaded_file:
     col1, col2 = st.columns([2, 3])
 
     with col1:
-        question = st.text_input("What do you want to ask?")
+        st.subheader("🤖 Ask AI About Your Resume")
+        question = st.text_input("Type your question:")
         if question:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are an expert in resume review."},
-                    {"role": "user", "content": f"My resume:\n{resume_text}\n\nQuestion: {question}"}
-                ]
-            )
-            st.write("Answer:", response.choices[0].message.content)
+            answer = ask_huggingface(question, resume_text)
+            st.write("Answer:", answer)
 
     with col2:
         st.subheader("📝 Resume Preview")
