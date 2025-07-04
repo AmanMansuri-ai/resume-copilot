@@ -19,7 +19,12 @@ with st.sidebar:
 
 
 # Load QA model
-qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
+qa_pipeline = pipeline(
+    "question-answering",
+    model="distilbert-base-uncased-distilled-squad",
+    device=-1  # ✅ Force CPU
+)
+
 
 # Two columns: Left = Q&A | Right = Resume Preview
 col1, col2 = st.columns([2, 3])
