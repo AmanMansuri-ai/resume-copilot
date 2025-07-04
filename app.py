@@ -6,8 +6,8 @@ import requests
 # ✅ OpenRouter API Key from Streamlit Secrets
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# ✅ LLaMA API Call
-def ask_llama(question, context):
+# ✅ Mixtral API Call
+def ask_mixtral(question, context):
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -16,7 +16,7 @@ def ask_llama(question, context):
 
     # Send the resume and question as context
     payload = {
-        "model": "meta-llama/llama-3-8b-instruct:free",
+        "model": "mistralai/mixtral-8x7b-instruct",
         "messages": [
             {"role": "system", "content": "You are a helpful assistant who answers questions about resumes."},
             {"role": "user", "content": f"My resume:\n{context}\n\nQuestion: {question}"}
@@ -34,7 +34,7 @@ def ask_llama(question, context):
 # ✅ Streamlit UI
 st.set_page_config(page_title="ResumeCopilot", page_icon="📄", layout="wide")
 st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by LLaMA 3 🚀</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Mixtral 🚀</p>", unsafe_allow_html=True)
 st.write("---")
 
 # ✅ Sidebar
@@ -57,7 +57,7 @@ if uploaded_file:
         st.subheader("🤖 Ask AI About Your Resume")
         question = st.text_input("Type your question:")
         if question:
-            answer = ask_llama(question, resume_text)
+            answer = ask_mixtral(question, resume_text)
             st.write("Answer:", answer)
 
     with col2:
@@ -67,3 +67,4 @@ if uploaded_file:
 
 else:
     st.warning("Please upload your resume from the sidebar.")
+
