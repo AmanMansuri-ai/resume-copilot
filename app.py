@@ -21,7 +21,7 @@ with st.sidebar:
 # Load QA model
 qa_pipeline = pipeline(
     "question-answering",
-    model="distilbert-base-uncased-distilled-squad",
+    model="deepset/roberta-base-squad2",
     device=-1  # ✅ Force CPU
 )
 
