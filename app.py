@@ -3,34 +3,38 @@ from PyPDF2 import PdfReader
 import os
 import requests
 
-# ✅ Hugging Face API Key from Secrets
-HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+# ✅ OpenRouter API Key from Streamlit Secrets
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# ✅ Ask Mistral 7B API
-def ask_mistral(question, context):
-    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-    headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
-
-    # Format the prompt
-    prompt = f"### Context:\n{context}\n\n### Question:\n{question}\n\n### Answer:"
-
-    payload = {
-        "inputs": prompt,
-        "parameters": {"max_new_tokens": 150}
+# ✅ LLaMA API Call
+def ask_llama(question, context):
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json"
     }
 
-    response = requests.post(API_URL, headers=headers, json=payload)
-    
+    # Send the resume and question as context
+    payload = {
+        "model": "meta-llama/llama-3-8b-instruct:free",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant who answers questions about resumes."},
+            {"role": "user", "content": f"My resume:\n{context}\n\nQuestion: {question}"}
+        ],
+        "max_tokens": 150
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
     if response.status_code == 200:
         result = response.json()
-        return result[0]['generated_text'].split("### Answer:")[-1].strip()
+        return result["choices"][0]["message"]["content"]
     else:
         return f"Error: {response.status_code} - {response.text}"
 
-# ✅ Streamlit App Layout
+# ✅ Streamlit UI
 st.set_page_config(page_title="ResumeCopilot", page_icon="📄", layout="wide")
 st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Mistral 🚀</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by LLaMA 3 🚀</p>", unsafe_allow_html=True)
 st.write("---")
 
 # ✅ Sidebar
@@ -40,7 +44,7 @@ with st.sidebar:
     st.markdown("---")
     st.caption("👤 Aman Mansuri | [GitHub](https://github.com/AmanMansuri-ai/resume-copilot)")
 
-# ✅ Resume Processing
+# ✅ Resume Q&A Flow
 if uploaded_file:
     reader = PdfReader(uploaded_file)
     resume_text = ""
@@ -53,7 +57,7 @@ if uploaded_file:
         st.subheader("🤖 Ask AI About Your Resume")
         question = st.text_input("Type your question:")
         if question:
-            answer = ask_mistral(question, resume_text)
+            answer = ask_llama(question, resume_text)
             st.write("Answer:", answer)
 
     with col2:
