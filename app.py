@@ -1,58 +1,47 @@
 import streamlit as st
-from transformers import pipeline
+import openai
 from PyPDF2 import PdfReader
+import os
 
-st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 Resumed By Copilot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Transformers 🚀</p>", unsafe_allow_html=True)
+# ✅ Set your OpenAI API key from env
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+st.set_page_config(page_title="ResumeCopilot", page_icon="📄", layout="wide")
+st.title("📄 ResumeCopilot")
+st.caption("Ask AI questions about your resume — Powered by GPT 🚀")
 st.write("---")
-
 
 with st.sidebar:
     st.header("📄 Upload Your Resume")
     uploaded_file = st.file_uploader("Choose your resume (PDF)", type=["pdf"])
 
     st.markdown("---")
-    st.markdown("👤 **Aman Mansuri**")
-    st.caption("[GitHub Repo](https://github.com/AmanMansuri-ai/resume-copilot)")
-
-
-
-
-# Load QA model
-qa_pipeline = pipeline(
-    "question-answering",
-    model="deepset/roberta-base-squad2",
-    device=-1  # ✅ Force CPU
-)
-
-
-# Two columns: Left = Q&A | Right = Resume Preview
-col1, col2 = st.columns([2, 3])
+    st.caption("👤 Aman Mansuri | [GitHub](https://github.com/AmanMansuri-ai/resume-copilot)")
 
 if uploaded_file:
-    # Extract text
     reader = PdfReader(uploaded_file)
     resume_text = ""
     for page in reader.pages:
         resume_text += page.extract_text() or ""
 
-    with col1:
-        col1.subheader("🤖 Ask AI About Your Resume")
+    col1, col2 = st.columns([2, 3])
 
-        question = st.text_input("Type your question:")
+    with col1:
+        question = st.text_input("What do you want to ask?")
         if question:
-            result = qa_pipeline(question=question, context=resume_text)
-            st.write("Answer:", result["answer"])
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {"role": "system", "content": "You are an expert in resume review."},
+                    {"role": "user", "content": f"My resume:\n{resume_text}\n\nQuestion: {question}"}
+                ]
+            )
+            st.write("Answer:", response.choices[0].message.content)
 
     with col2:
-        col2.subheader("📝 Resume Text Preview")
-
+        st.subheader("📝 Resume Preview")
         if st.checkbox("Show extracted resume text"):
             st.write(resume_text)
 
 else:
-    st.warning("Please upload your resume from the sidebar to start.")
-
-st.write("---")
-st.markdown("<p style='text-align: center; font-size: 12px;'>© 2025 Aman Mansuri | Built with ❤️ using Streamlit</p>", unsafe_allow_html=True)
-
+    st.warning("Please upload your resume from the sidebar.")
