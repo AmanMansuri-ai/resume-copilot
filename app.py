@@ -2,33 +2,49 @@ import streamlit as st
 from transformers import pipeline
 from PyPDF2 import PdfReader
 
-# Load QA model from Hugging Face
+# ✅ Page configuration
+st.set_page_config(page_title="ResumeCopilot - AI Resume Assistant", page_icon="📄", layout="wide")
+st.title("📄 ResumeCopilot")
+st.caption("Ask AI smart questions about your resume — Powered by Transformers 🚀")
+st.write("---")
+
+with st.sidebar:
+    st.header("📄 Upload Your Resume")
+    uploaded_file = st.file_uploader("Choose your resume (PDF)", type=["pdf"])
+
+    # Optional: About section
+    st.markdown("---")
+    st.caption("🔨 Built by Aman Mansuri")
+
+
+
+# Load QA model
 qa_pipeline = pipeline("question-answering", model="distilbert-base-uncased-distilled-squad")
 
-st.title("ResumeCopilot - Ask Questions About Your Resume")
-
-# Step 1: Upload the resume
-uploaded_file = st.file_uploader("Upload your resume (PDF only)", type="pdf")
+# Two columns: Left = Q&A | Right = Resume Preview
+col1, col2 = st.columns([2, 3])
 
 if uploaded_file:
-    # Step 2: Read and extract text from PDF
+    # Extract text
     reader = PdfReader(uploaded_file)
     resume_text = ""
     for page in reader.pages:
         resume_text += page.extract_text() or ""
-    
-    st.success("Resume uploaded and text extracted successfully ✅")
-    
-    # Optional: Show the resume text
-    if st.checkbox("Show extracted resume text"):
-        st.write(resume_text)
-    
-    # Step 3: Ask a question
-    question = st.text_input("What do you want to ask about your resume?")
-    
-    if question:
-        result = qa_pipeline(question=question, context=resume_text)
-        st.write("Answer:", result["answer"])
+
+    with col1:
+        st.subheader("🔍 Ask AI About Your Resume")
+        question = st.text_input("Type your question:")
+        if question:
+            result = qa_pipeline(question=question, context=resume_text)
+            st.write("Answer:", result["answer"])
+
+    with col2:
+        st.subheader("📝 Resume Preview")
+        if st.checkbox("Show extracted resume text"):
+            st.write(resume_text)
 
 else:
-    st.warning("Please upload your resume to start asking questions.")
+    st.warning("Please upload your resume from the sidebar to start.")
+
+st.write("---")
+st.caption("ResumeCopilot © 2025 | GitHub: [AmanMansuri-ai](https://github.com/AmanMansuri-ai/resume-copilot)")
