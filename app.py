@@ -3,37 +3,44 @@ from PyPDF2 import PdfReader
 import os
 import requests
 
-# ✅ Hugging Face API call function
+# ✅ Hugging Face API Key from Secrets
 HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
 
-def ask_huggingface(question, context):
-    API_URL = "https://api-inference.huggingface.co/models/deepset/roberta-base-squad2"
+# ✅ Ask Mistral 7B API
+def ask_mistral(question, context):
+    API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
     headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
-    payload = {"inputs": {"question": question, "context": context}}
+
+    # Format the prompt
+    prompt = f"### Context:\n{context}\n\n### Question:\n{question}\n\n### Answer:"
+
+    payload = {
+        "inputs": prompt,
+        "parameters": {"max_new_tokens": 150}
+    }
 
     response = requests.post(API_URL, headers=headers, json=payload)
     
-    # ✅ Safely handle the response
     if response.status_code == 200:
         result = response.json()
-        return result.get('answer', 'No answer found')
+        return result[0]['generated_text'].split("### Answer:")[-1].strip()
     else:
         return f"Error: {response.status_code} - {response.text}"
 
-# ✅ Streamlit page config
+# ✅ Streamlit App Layout
 st.set_page_config(page_title="ResumeCopilot", page_icon="📄", layout="wide")
 st.markdown("<h1 style='text-align: center; color: #0E5484;'>📄 ResumeCopilot</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Hugging Face 🚀</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Ask AI smart questions about your resume — Powered by Mistral 🚀</p>", unsafe_allow_html=True)
 st.write("---")
 
-# ✅ Sidebar upload
+# ✅ Sidebar
 with st.sidebar:
     st.header("📄 Upload Your Resume")
     uploaded_file = st.file_uploader("Choose your resume (PDF)", type=["pdf"])
     st.markdown("---")
     st.caption("👤 Aman Mansuri | [GitHub](https://github.com/AmanMansuri-ai/resume-copilot)")
 
-# ✅ Process resume
+# ✅ Resume Processing
 if uploaded_file:
     reader = PdfReader(uploaded_file)
     resume_text = ""
@@ -46,7 +53,7 @@ if uploaded_file:
         st.subheader("🤖 Ask AI About Your Resume")
         question = st.text_input("Type your question:")
         if question:
-            answer = ask_huggingface(question, resume_text)
+            answer = ask_mistral(question, resume_text)
             st.write("Answer:", answer)
 
     with col2:
