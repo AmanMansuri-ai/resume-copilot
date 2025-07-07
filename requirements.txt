@@ -3,3 +3,6 @@ transformers
 torch
 PyPDF2
 openai>=1.0.0
+PyMuPDF
+requests
+python-docx
