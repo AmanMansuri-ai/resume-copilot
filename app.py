@@ -1,10 +1,35 @@
 import streamlit as st
-import fitz  # PyMuPDF
+import fitz
 import requests
 from io import BytesIO
 from docx import Document
 
-# ✅ Together API call
+# 🎨 Theme toggle
+dark_mode = st.sidebar.checkbox("🌙 Dark Mode", value=False)
+
+# Theme CSS
+if dark_mode:
+    background = "#2E3440"
+    text_color = "#ECEFF4"
+    card_bg = "#3B4252"
+    btn_color = "#5E81AC"
+    st.markdown(f"""
+        <style>
+        body {{ background-color: {background}; color: {text_color}; }}
+        .stButton > button {{ background-color: {btn_color}; color: white; }}
+        .stTextInput input, .stTextArea textarea {{ background-color: {card_bg}; color: {text_color}; }}
+        .main, .block-container {{ background-color: {background}; }}
+        </style>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown("""
+        <style>
+        body { background-color: #f7fafd; }
+        .stButton > button { background-color: #0E5484; color: white; }
+        .stTextInput input, .stTextArea textarea { background-color: #fff; color: #000; }
+        </style>
+    """, unsafe_allow_html=True)
+
 def ask_together(question, context, api_key):
     url = "https://api.together.xyz/v1/chat/completions"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -16,128 +41,70 @@ def ask_together(question, context, api_key):
         ],
         "max_tokens": 300
     }
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
-        else:
-            return f"❌ API Error: {response.status_code} - {response.text}"
-    except Exception as e:
-        return f"❌ Request failed: {str(e)}"
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code == 200:
+        return response.json()["choices"][0]["message"]["content"]
+    return f"❌ API Error: {response.status_code}"
 
-# ✅ Extract text from PDF
 def extract_text_from_pdf(file):
     doc = fitz.open(stream=file.read(), filetype="pdf")
     return " ".join(page.get_text() for page in doc)
 
-# ✅ Create DOCX file
 def create_docx(text):
-    doc = Document()
-    doc.add_paragraph(text)
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-    return buffer
+    doc = Document(); doc.add_paragraph(text)
+    buf = BytesIO(); doc.save(buf); buf.seek(0)
+    return buf
 
-# ✅ Streamlit Config & Custom CSS
-st.set_page_config(page_title="ResumeCopilot AI", page_icon="📄", layout="wide")
-
-st.markdown("""
-    <style>
-    body { background-color: #f7fafd; }
-    h1 { color: #0E5484; font-size: 2.8rem; font-weight: 700; text-align: center; margin-bottom: 0.3em; }
-    h5 { color: #555; text-align: center; font-size: 1.1rem; margin-top: 0; }
-    .stButton > button { background-color: #0E5484; color: white; border-radius: 8px; padding: 0.5em 1em; font-weight: 600; }
-    .stTextInput > div > div > input { border-radius: 8px; border: 1px solid #ccc; padding: 0.4em; }
-    .stRadio > div { gap: 10px; }
-    </style>
-""", unsafe_allow_html=True)
-
-# ✅ App Header
-st.markdown("<h1>ResumeCopilot</h1>", unsafe_allow_html=True)
-st.markdown("<h5>Your AI-powered Resume Assistant 🚀</h5>", unsafe_allow_html=True)
+# Page header
+st.set_page_config(page_title="ResumeCopilot AI", layout="wide")
+st.markdown("<h1>Your AI Resume Assistant</h1>", unsafe_allow_html=True)
 st.write("---")
 
-# ✅ Sidebar
+# Sidebar
 with st.sidebar:
-    st.header("📄 Upload Resume")
-    uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
+    uploaded_file = st.file_uploader("📄 Upload your resume (PDF)", type=["pdf"])
     api_key = st.text_input("🔑 Together API Key", type="password")
-    st.markdown("---")
-    st.caption("👤 Built by Aman Mansuri | [GitHub](https://github.com/AmanMansuri-ai/resume-copilot)")
 
-# ✅ Main App Logic
+# Main
 if uploaded_file:
     if not api_key:
-        st.warning("⚠️ Please enter your Together API key to continue.")
+        st.error("Please enter your Together API key.")
         st.stop()
-
     resume_text = extract_text_from_pdf(uploaded_file)
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        mode = st.radio("Select Action", ["💬 Ask Questions", "🛠️ Improve Resume", "🔍 Job Role Match"])
+        if mode == "💬 Ask Questions":
+            if "chat" not in st.session_state: st.session_state.chat = []
+            q = st.text_input("Ask about your resume…")
+            if q:
+                with st.spinner("Thinking…"): a = ask_together(q, resume_text, api_key)
+                st.session_state.chat.append((q, a))
+            for q, a in st.session_state.chat:
+                st.markdown(f"**You:** {q}"); st.markdown(f"**AI:** {a}")
+            if st.button("🧹 Clear Chat"): st.session_state.chat = []
 
-    col1, col2 = st.columns([1, 2])
+        elif mode == "🛠️ Improve Resume":
+            with st.spinner("Generating suggestions…"):
+                prompt = ("Review this resume; suggest clear improvements: formatting, clarity, action verbs, quantified results.")
+                suggestions = ask_together(prompt, resume_text, api_key)
+            st.info("📝 Suggestions:"); st.success(suggestions)
+            buf = create_docx(suggestions)
+            st.download_button("📥 Download DOCX", buf, file_name="Improvements.docx")
 
-    with col1:
-        st.subheader("🔎 Select an Action")
-        mode = st.radio("", ["💬 Ask a question", "🛠️ Improve my resume", "🔍 Job Match Analysis"])
-
-        # ✅ Ask a question mode
-        if mode == "💬 Ask a question":
-            if "chat_history" not in st.session_state:
-                st.session_state.chat_history = []
-
-            question = st.text_input("Ask something about your resume:")
-            if question:
-                with st.spinner("Analyzing with AI..."):
-                    answer = ask_together(question, resume_text, api_key)
-                    st.session_state.chat_history.append({"question": question, "answer": answer})
-
-            for chat in st.session_state.chat_history:
-                st.markdown(f"**You:** {chat['question']}")
-                st.markdown(f"**AI:** {chat['answer']}")
-
-            if st.button("🧹 Clear Chat"):
-                st.session_state.chat_history = []
-
-        # ✅ Improve resume mode
-        elif mode == "🛠️ Improve my resume":
-            with st.spinner("Getting improvement suggestions..."):
-                improvement_prompt = (
-                    "Review this resume and suggest detailed, actionable improvements on formatting, clarity, and impact. "
-                    "Focus on action verbs, quantified results, and clarity."
-                )
-                suggestions = ask_together(improvement_prompt, resume_text, api_key)
-
-            st.info("✍️ Suggested Improvements:")
-            st.success(suggestions)
-
-            doc_buffer = create_docx(suggestions)
-            st.download_button(
-                label="📥 Download Suggestions as DOCX",
-                data=doc_buffer,
-                file_name="Resume_Improvements.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-
-        # ✅ Job match analysis mode
-        elif mode == "🔍 Job Match Analysis":
-            job_role = st.text_input("Enter the job role you're targeting (e.g., Data Scientist):")
-            if job_role:
-                with st.spinner("Analyzing match..."):
-                    match_prompt = (
-                        f"Analyze how well this resume matches the role '{job_role}'. "
-                        "Give a match percentage, key strengths, and areas to improve."
-                    )
-                    match_result = ask_together(match_prompt, resume_text, api_key)
-                st.success(match_result)
-
-    # ✅ Resume preview
-    with col2:
-        st.subheader("📝 Resume Preview")
-        with st.expander("Click to view extracted resume text"):
+        else:
+            role = st.text_input("Target Job Role:")
+            if role:
+                with st.spinner("Analyzing match…"):
+                    prompt = (f"Analyze fit for '{role}'. Give % match, strengths, and suggestions.")
+                    result = ask_together(prompt, resume_text, api_key)
+                st.success(result)
+    with c2:
+        st.subheader("📄 Resume Preview")
+        with st.expander("See extracted text"):
             st.write(resume_text)
-
 else:
-    st.warning("📄 Please upload your resume to get started.")
+    st.warning("Upload a PDF to begin.")
 
 st.write("---")
-st.caption("🚀 ResumeCopilot • Built by Aman Mansuri • Powered by Together AI & Streamlit Cloud")
+st.caption("Built by Aman Mansuri • Powered by Together AI & Streamlit Cloud")
